@@ -1,31 +1,127 @@
-version: '3.1'
+version: '3.8'
+
 services:
-  proxy:
-    image: jwilder/nginx-proxy:latest
-    ports:
-      - "80:80"
+  router:
+    image: traefik:latest
+    command:
+      - --api=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.network=${NARRA_STACK_NAME}_external
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
     volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - 80:80
+    expose:
+      - 8080
+    networks:
+      - external
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.traefik.service=api@internal
+      - traefik.http.routers.traefik.rule=Host(`router.narra`)
+      - traefik.http.services.traefik.loadbalancer.server.port=8080
+    restart: on-failure
+  mongo:
+    image: mongo:latest
+    volumes:
+      - mongo:/data/db
+    networks:
+      internal:
+        ipv4_address: 172.42.2.2
+    restart: on-failure
+  redis:
+    image: redis:latest
+    volumes:
+      - redis:/data
+    networks:
+      internal:
+        ipv4_address: 172.42.2.3
+    restart: on-failure
+  storage:
+    image: minio/minio:latest
+    volumes:
+      - storage:/data
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+    command: server --address :80 /data
+    expose:
+      - 80
+    networks:
+      external:
+      internal:
+        ipv4_address: 172.42.2.4
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.storage.rule=Host(`${NARRA_STORAGE_HOSTNAME}`)
+      - traefik.http.services.storage.loadbalancer.server.port=80
+    depends_on:
+      - router
+    restart: on-failure
+  master:
+    image: narra/master:latest
+    volumes:
+      - ./nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
+    env_file:
+      - ./.env
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.narra.rule=Host(`${NARRA_API_HOSTNAME}`)
+      - traefik.http.services.narra.loadbalancer.server.port=80
+    expose:
+      - 80
+    networks:
+      external:
+      internal:
+        ipv4_address: 172.42.2.5
+    extra_hosts:
+      - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
+      - "${NARRA_API_HOSTNAME}: 172.42.2.5"
+    depends_on:
+      - router
+      - mongo
+      - redis
+      - storage
+    restart: on-failure
+  storage_init:
+    image: minio/mc:latest
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      /usr/bin/mc config host add storage http://${NARRA_STORAGE_HOSTNAME} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY};
+      /usr/bin/mc mb --ignore-existing storage/narra;
+      /usr/bin/mc policy set download storage/narra;
+      exit 0;
+      "
+    networks:
+      internal:
+        ipv4_address: 172.42.2.6
+    extra_hosts:
+      - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
+    depends_on:
+      - storage
+  worker_alfa:
+    image: narra/worker:latest
     depends_on:
       - master
       - mongo
       - redis
       - storage
-  master:
-    image: narra/master:latest
-    depends_on:
-      - mongo
-      - redis
-      - storage
-    ports:
-     - "8080:8080"
+      - storage_init
     env_file:
-      - ./narra.env
+      - ./.env
     environment:
-      - NARRA_STORAGE_HOSTNAME=${NARRA_STORAGE_HOSTNAME}
-      - VIRTUAL_HOST=${NARRA_API_HOSTNAME}
-      - VIRTUAL_PORT=8080
-  worker:
+      - NARRA_WORKER_TYPE=master
+    networks:
+      - internal
+    extra_hosts:
+      - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
+      - "${NARRA_API_HOSTNAME}: 172.42.2.5"
+    restart: on-failure
+  worker_bravo:
     image: narra/worker:latest
     depends_on:
       - master
@@ -33,40 +129,44 @@ services:
       - redis
       - storage
     env_file:
-      - ./narra.env
-  mongo:
-    image: mongo:latest
-    volumes:
-      - mongo_data:/data/db
-  redis:
-    image: redis:latest
-    volumes:
-      - redis_data:/data
-  storage:
-    image: minio/minio
-    ports:
-      - "9000:9000"
-    volumes:
-      - storage:/data
+      - ./.env
     environment:
-      - VIRTUAL_HOST=${NARRA_STORAGE_HOSTNAME}
-      - VIRTUAL_PORT=9000
-      - MINIO_ACCESS_KEY=minio
-      - MINIO_SECRET_KEY=minio123
-    command: server /data
-  initialization:
-    image: minio/mc
+      - NARRA_WORKER_TYPE=worker
+    networks:
+      - internal
+    extra_hosts:
+      - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
+      - "${NARRA_API_HOSTNAME}: 172.42.2.5"
+    restart: on-failure
+  editor:
+    image: narra/editor:latest
+    volumes:
+      - ./nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
+    env_file:
+      - ./.env
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.editor.rule=Host(`${NARRA_EDITOR_HOSTNAME}`)
+      - traefik.http.services.editor.loadbalancer.server.port=80
+    expose:
+      - 80
+    networks:
+      external:
     depends_on:
-      - storage
-    entrypoint: >
-      /bin/sh -c "
-      sleep 5;
-      /usr/bin/mc config host add storage http://storage:9000 minio minio123;
-      /usr/bin/mc mb storage/narra;
-      /usr/bin/mc policy set download storage/narra;
-      exit 0;
-      "
+      - router
+      - master
+    restart: on-failure
+networks:
+  external:
+    ipam:
+      config:
+        - subnet: 172.42.1.0/24
+  internal:
+    ipam:
+      config:
+        - subnet: 172.42.2.0/24
 volumes:
   storage:
-  mongo_data:
-  redis_data:
+  mongo:
+  redis:
+

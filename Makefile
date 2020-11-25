@@ -1,21 +1,23 @@
-NAME = narra
+ifneq (,$(wildcard ./docker/.env))
+    include ./docker/.env
+    export
+endif
 
-.PHONY: start debug log stop restart down
+.PHONY: start deploy dev log stop down
 
-start:
-	export DEBUG=false; cd docker; docker-compose -p $(NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml up
+start: development
 
-debug:
-	export DEBUG=true; cd docker; docker-compose -p $(NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml up
+production:
+	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml up
+
+development:
+	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml up
 
 log:
-	export DEBUG=false; cd docker; docker-compose -p $(NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml logs
+	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml logs
 
 stop:
-	export DEBUG=false; cd docker; docker-compose -p $(NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml stop
-
-restart:
-	export DEBUG=false; cd docker; docker-compose -p $(NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml restart
+	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml stop
 
 down:
-	export DEBUG=false; cd docker; docker-compose -p $(NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml down
+	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml down
