@@ -21,7 +21,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.traefik.service=api@internal
-      - traefik.http.routers.traefik.rule=Host(`router.narra`)
+      - traefik.http.routers.traefik.rule=Host(`${NARRA_ROUTER_HOSTNAME}`)
       - traefik.http.services.traefik.loadbalancer.server.port=8080
     restart: on-failure
   mongo:
