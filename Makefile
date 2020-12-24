@@ -8,7 +8,7 @@ endif
 start: development
 
 production:
-	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml up
+	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml up -d
 
 development:
 	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml up
