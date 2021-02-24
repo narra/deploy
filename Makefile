@@ -1,23 +1,32 @@
-ifneq (,$(wildcard ./docker/.env))
-    include ./docker/.env
+# Absolute path to .env file
+ENV_FILE = $(shell pwd)/docker/narra.env
+DOCKER_FILE = $(shell pwd)/docker/docker-compose.yml
+DOCKER_FILE_DEVELOPMENT = $(shell pwd)/docker/docker-compose.development.yml
+
+# Use for makefile
+ifneq (,$(wildcard $(ENV_FILE)))
+    include $(ENV_FILE)
     export
 endif
 
-.PHONY: start deploy dev log stop down
+.PHONY: deploy redeploy dev stop clean reset
 
-start: development
+deploy:
+	ENV_FILE=$(ENV_FILE) docker-compose -p $(NARRA_STACK_NAME) --env-file $(ENV_FILE) -f $(DOCKER_FILE) up -d
 
-production:
-	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml up -d
+redeploy: stop clean deploy
 
-development:
-	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml up
-
-log:
-	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml logs
+dev:
+	ENV_FILE=$(ENV_FILE) docker-compose -p $(NARRA_STACK_NAME) --env-file $(ENV_FILE) -f $(DOCKER_FILE) -f $(DOCKER_FILE_DEVELOPMENT) up
 
 stop:
-	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml stop
+	ENV_FILE=$(ENV_FILE) docker-compose -p $(NARRA_STACK_NAME) --env-file $(ENV_FILE) -f $(DOCKER_FILE) stop
 
-down:
-	cd docker; docker-compose -p $(NARRA_STACK_NAME) -f ./docker-compose.yml -f ./docker-compose.development.yml down
+clean:
+	docker system prune -f
+
+reset: clean
+	docker volume prune -f
+
+logs:
+	ENV_FILE=$(ENV_FILE) docker-compose -p $(NARRA_STACK_NAME) --env-file $(ENV_FILE) -f $(DOCKER_FILE) logs -f -t

@@ -1,15 +1,24 @@
 version: '3.8'
+
 services:
   master:
+    environment:
+      - NARRA_ENV=development
     volumes:
       - ../../:/narra_source
   worker_alfa:
+    environment:
+      - NARRA_ENV=development
     volumes:
       - ../../:/narra_source
   worker_bravo:
+    environment:
+      - NARRA_ENV=development
     volumes:
       - ../../:/narra_source
   editor:
+    environment:
+      - NARRA_ENV=development
     volumes:
       - ../../:/narra_source
   mongo:
