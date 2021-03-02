@@ -64,7 +64,7 @@ services:
   master:
     image: narra/master:latest
     volumes:
-      - ./nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
+      - ${ROOT}/docker/nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
     env_file:
       - ${ENV_FILE}
     labels:
@@ -103,6 +103,16 @@ services:
       - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
     depends_on:
       - storage
+  editor_init:
+    image: alpine/git
+    volumes:
+      - editor:/tmp/narra_editor
+      - ${ROOT}/docker/scripts:/tmp/scripts
+    env_file:
+      - ${ENV_FILE}
+    entrypoint: /bin/sh /tmp/scripts/editor.sh
+    networks:
+      external:
   worker_alfa:
     image: narra/worker:latest
     depends_on:
@@ -139,11 +149,11 @@ services:
       - "${NARRA_API_HOSTNAME}: 172.42.2.5"
     restart: on-failure
   editor:
-    image: narra/editor:latest
+    image: nginx
     volumes:
-      - ./nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
-    env_file:
-      - ${ENV_FILE}
+      - editor:/usr/share/nginx/html
+      - ${ROOT}/docker/nginx/editor.conf:/etc/nginx/conf.d/default.conf
+      - ${ROOT}/docker/nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
     labels:
       - traefik.enable=true
       - traefik.http.routers.editor.rule=Host(`${NARRA_EDITOR_HOSTNAME}`)
@@ -153,6 +163,7 @@ services:
     networks:
       external:
     depends_on:
+      - editor_init
       - router
       - master
     restart: on-failure
@@ -169,4 +180,5 @@ volumes:
   storage:
   mongo:
   redis:
+  editor:
 
