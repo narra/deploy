@@ -64,7 +64,7 @@ services:
   master:
     image: narra/master:latest
     volumes:
-      - ${ROOT}/docker/nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
+      - ${NARRA_ROOT}/docker/nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
     env_file:
       - ${ENV_FILE}
     labels:
@@ -107,7 +107,7 @@ services:
     image: alpine/git
     volumes:
       - editor:/tmp/narra_editor
-      - ${ROOT}/docker/scripts:/tmp/scripts
+      - ${NARRA_ROOT}/docker/scripts:/tmp/scripts
     env_file:
       - ${ENV_FILE}
     entrypoint: /bin/sh /tmp/scripts/editor.sh
@@ -152,8 +152,8 @@ services:
     image: nginx
     volumes:
       - editor:/usr/share/nginx/html
-      - ${ROOT}/docker/nginx/editor.conf:/etc/nginx/conf.d/default.conf
-      - ${ROOT}/docker/nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
+      - ${NARRA_ROOT}/docker/nginx/editor.conf:/etc/nginx/conf.d/default.conf
+      - ${NARRA_ROOT}/docker/nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
     labels:
       - traefik.enable=true
       - traefik.http.routers.editor.rule=Host(`${NARRA_EDITOR_HOSTNAME}`)
