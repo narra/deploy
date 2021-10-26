@@ -1,26 +1,30 @@
+# Copyright: (c) 2021, Michal Mocnak <michal@narra.eu>, Eric Rosenzveig <eric@narra.eu>
+# Copyright: (c) 2021, Narra Project
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
 version: '3.8'
 
 services:
-  master:
+  api:
     environment:
       - NARRA_ENV=development
     volumes:
-      - ../../:/narra_source
-  worker_alfa:
+      - ../../:/tmp/narra_source
+  worker:
     environment:
       - NARRA_ENV=development
     volumes:
-      - ../../:/narra_source
-  worker_bravo:
+      - ../../:/tmp/narra_source
+  worker_node_01:
     environment:
       - NARRA_ENV=development
     volumes:
-      - ../../:/narra_source
+      - ../../:/tmp/narra_source
   editor:
     environment:
       - NARRA_ENV=development
     volumes:
-      - ../../:/narra_source
+      - ../../:/tmp/narra_source
   mongo:
     ports:
       - 27017:27017

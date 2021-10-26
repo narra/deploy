@@ -1,3 +1,7 @@
+# Copyright: (c) 2021, Michal Mocnak <michal@narra.eu>, Eric Rosenzveig <eric@narra.eu>
+# Copyright: (c) 2021, Narra Project
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
 version: '3.8'
 
 services:
@@ -61,31 +65,6 @@ services:
     depends_on:
       - router
     restart: on-failure
-  master:
-    image: narra/master:latest
-    volumes:
-      - ${NARRA_ROOT}/docker/nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
-    env_file:
-      - ${ENV_FILE}
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.narra.rule=Host(`${NARRA_API_HOSTNAME}`)
-      - traefik.http.services.narra.loadbalancer.server.port=80
-    expose:
-      - 80
-    networks:
-      external:
-      internal:
-        ipv4_address: 172.42.2.5
-    extra_hosts:
-      - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
-      - "${NARRA_API_HOSTNAME}: 172.42.2.5"
-    depends_on:
-      - router
-      - mongo
-      - redis
-      - storage
-    restart: on-failure
   storage_init:
     image: minio/mc:latest
     entrypoint: >
@@ -103,57 +82,46 @@ services:
       - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
     depends_on:
       - storage
-  editor_init:
-    image: alpine/git
+  api:
+    image: phusion/passenger-ruby26
     volumes:
-      - editor:/tmp/narra_editor
-      - ${NARRA_ROOT}/docker/scripts:/tmp/scripts
+      - logs:/var/log/narra
+      - ${NARRA_ROOT}/docker/nginx/api.conf:/etc/nginx/sites-enabled/narra.conf
+      - ${NARRA_ROOT}/docker/nginx/env.conf:/etc/nginx/main.d/narra.conf
+      - ${NARRA_ROOT}/docker/nginx/upload.conf:/etc/nginx/conf.d/upload.conf
+      - ${NARRA_ROOT}/docker/scripts/nginx_service.sh:/etc/service/nginx/run
+      - ${NARRA_ROOT}/docker/scripts/api_install.sh:/etc/my_init.d/42_narra_install.sh
+      - ${NARRA_ROOT}/docker/scripts/plugins_discovery.sh:/tmp/narra_plugins_discovery.sh
     env_file:
-      - ${ENV_FILE}
-    entrypoint: /bin/sh /tmp/scripts/editor.sh
+      - ${NARRA_ENV_FILE}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.api.rule=Host(`${NARRA_API_HOSTNAME}`)
+      - traefik.http.services.api.loadbalancer.server.port=80
+    expose:
+      - 80
     networks:
       external:
-  worker_alfa:
-    image: narra/worker:latest
-    depends_on:
-      - master
-      - mongo
-      - redis
-      - storage
-      - storage_init
-    env_file:
-      - ${ENV_FILE}
-    environment:
-      - NARRA_WORKER_TYPE=master
-    networks:
-      - internal
+      internal:
+        ipv4_address: 172.42.2.5
     extra_hosts:
       - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
       - "${NARRA_API_HOSTNAME}: 172.42.2.5"
-    restart: on-failure
-  worker_bravo:
-    image: narra/worker:latest
     depends_on:
-      - master
+      - router
       - mongo
       - redis
       - storage
-    env_file:
-      - ${ENV_FILE}
-    environment:
-      - NARRA_WORKER_TYPE=worker
-    networks:
-      - internal
-    extra_hosts:
-      - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
-      - "${NARRA_API_HOSTNAME}: 172.42.2.5"
     restart: on-failure
   editor:
-    image: nginx
+    image: phusion/passenger-ruby26
     volumes:
-      - editor:/usr/share/nginx/html
-      - ${NARRA_ROOT}/docker/nginx/editor.conf:/etc/nginx/conf.d/default.conf
-      - ${NARRA_ROOT}/docker/nginx/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
+      - ${NARRA_ROOT}/docker/nginx/editor.conf:/etc/nginx/sites-enabled/narra.conf
+      - ${NARRA_ROOT}/docker/nginx/upload.conf:/etc/nginx/conf.d/upload.conf
+      - ${NARRA_ROOT}/docker/scripts/nginx_service.sh:/etc/service/nginx/run
+      - ${NARRA_ROOT}/docker/scripts/editor_install.sh:/etc/my_init.d/42_narra_install.sh
+    env_file:
+      - ${NARRA_ENV_FILE}
     labels:
       - traefik.enable=true
       - traefik.http.routers.editor.rule=Host(`${NARRA_EDITOR_HOSTNAME}`)
@@ -163,9 +131,54 @@ services:
     networks:
       external:
     depends_on:
-      - editor_init
       - router
-      - master
+      - api
+    restart: on-failure
+  worker:
+    image: phusion/passenger-ruby26
+    volumes:
+      - logs:/var/log/narra
+      - ${NARRA_ROOT}/docker/scripts/worker_service.sh:/etc/service/narra/run
+      - ${NARRA_ROOT}/docker/scripts/worker_install.sh:/etc/my_init.d/42_narra_install.sh
+      - ${NARRA_ROOT}/docker/scripts/plugins_discovery.sh:/tmp/narra_plugins_discovery.sh
+    env_file:
+      - ${NARRA_ENV_FILE}
+    environment:
+      - NARRA_WORKER_TYPE=master
+    networks:
+      - internal
+    extra_hosts:
+      - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
+      - "${NARRA_API_HOSTNAME}: 172.42.2.5"
+    depends_on:
+      - router
+      - mongo
+      - redis
+      - storage
+      - api
+    restart: on-failure
+  worker_node_01:
+    image: phusion/passenger-ruby26
+    volumes:
+      - logs:/var/log/narra
+      - ${NARRA_ROOT}/docker/scripts/worker_service.sh:/etc/service/narra/run
+      - ${NARRA_ROOT}/docker/scripts/worker_install.sh:/etc/my_init.d/42_narra_install.sh
+      - ${NARRA_ROOT}/docker/scripts/plugins_discovery.sh:/tmp/narra_plugins_discovery.sh
+    env_file:
+      - ${NARRA_ENV_FILE}
+    environment:
+      - NARRA_WORKER_TYPE=worker
+    networks:
+      - internal
+    extra_hosts:
+      - "${NARRA_STORAGE_HOSTNAME}: 172.42.2.4"
+      - "${NARRA_API_HOSTNAME}: 172.42.2.5"
+    depends_on:
+      - router
+      - mongo
+      - redis
+      - storage
+      - api
     restart: on-failure
 networks:
   external:
@@ -180,5 +193,5 @@ volumes:
   storage:
   mongo:
   redis:
-  editor:
+  logs:
 
