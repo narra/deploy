@@ -31,7 +31,6 @@ else
         && chown -R app:app /home/app/source
 fi
 
-
 # Prepare ruby and update bundler
 sudo -u app rvm-exec ${RUBY_VERSION} gem install bundler:2.2.14
 

@@ -45,7 +45,7 @@ services:
         ipv4_address: 172.42.2.3
     restart: on-failure
   storage:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2020-10-28T08-16-50Z-48-ge773e06e5
     volumes:
       - storage:/data
     environment:
@@ -70,7 +70,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       sleep 5;
-      /usr/bin/mc config host add storage http://${NARRA_STORAGE_HOSTNAME} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY};
+      /usr/bin/mc alias set storage http://${NARRA_STORAGE_HOSTNAME} ${MINIO_ACCESS_KEY} ${MINIO_SECRET_KEY};
       /usr/bin/mc mb --ignore-existing storage/narra;
       /usr/bin/mc policy set download storage/narra;
       exit 0;

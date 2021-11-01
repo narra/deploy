@@ -1,0 +1,19 @@
+# Copyright: (c) 2021, Michal Mocnak <michal@narra.eu>, Eric Rosenzveig <eric@narra.eu>
+# Copyright: (c) 2021, Narra Project
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
+
+version: '3.8'
+
+services:
+  api:
+    environment:
+      - NARRA_ENV=production
+  worker:
+    environment:
+      - NARRA_ENV=production
+  worker_node_01:
+    environment:
+      - NARRA_ENV=production
+  editor:
+    environment:
+      - NARRA_ENV=production

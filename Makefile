@@ -13,13 +13,14 @@ ifneq (,$(wildcard $(NARRA_ENV_FILE)))
 endif
 
 NARRA_DOCKER_FILE = $(NARRA_ROOT)/docker/docker-compose.yml
+NARRA_DOCKER_FILE_PRODUCTION = $(NARRA_ROOT)/docker/docker-compose.production.yml
 NARRA_DOCKER_FILE_DEVELOPMENT = $(NARRA_ROOT)/docker/docker-compose.development.yml
 NARRA_COMPOSE_COMMAND = -p $(NARRA_STACK_NAME) --env-file $(NARRA_ENV_FILE) -f $(NARRA_DOCKER_FILE)
 
 .PHONY: deploy redeploy dev stop logs clean reset purge
 
 deploy:
-	NARRA_ROOT=$(NARRA_ROOT) NARRA_ENV_FILE=$(NARRA_ENV_FILE) docker-compose $(NARRA_COMPOSE_COMMAND) up -d
+	NARRA_ROOT=$(NARRA_ROOT) NARRA_ENV_FILE=$(NARRA_ENV_FILE) docker-compose $(NARRA_COMPOSE_COMMAND) -f $(NARRA_DOCKER_FILE_PRODUCTION) up -d
 
 redeploy: stop clean deploy
 

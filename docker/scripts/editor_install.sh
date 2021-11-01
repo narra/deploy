@@ -20,15 +20,15 @@ rm -rf /home/app/source/* \
 # Copying latest version into volumes
 # Resolution based on NARRA_ENV
 if [[ "$NARRA_ENV" == "development" ]]; then
-    rsync --progress -ah --exclude node_modules /tmp/narra_source/editor /home/app/source \
+    rsync --progress -ah --exclude node_modules /tmp/narra_source/angular-editor /home/app/source \
         && chown -R app:app /home/app/source
 else
-    git clone https://github.com/narra/angular-editor.git /home/app/source/editor \
+    git clone https://github.com/narra/angular-editor.git /home/app/source/angular-editor \
         && chown -R app:app /home/app/source
 fi
 
 # updating angular env with staging project
-cat > /home/app/source/editor/dist/editor/assets/environment.json <<EOF
+cat > /home/app/source/angular-editor/dist/editor/assets/environment.json <<EOF
     {
       "NARRA_API_HOSTNAME": "$NARRA_API_HOSTNAME"
     }
