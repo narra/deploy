@@ -5,15 +5,27 @@
 version: '3.8'
 
 services:
+  router:
+    restart: on-failure
+  mongo:
+    restart: on-failure
+  redis:
+    restart: on-failure
+  storage:
+    restart: on-failure
   api:
     environment:
       - NARRA_ENV=production
+    restart: on-failure
   worker:
     environment:
       - NARRA_ENV=production
+    restart: on-failure
   worker_node_01:
     environment:
       - NARRA_ENV=production
+    restart: on-failure
   editor:
     environment:
       - NARRA_ENV=production
+    restart: on-failure
