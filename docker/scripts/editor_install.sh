@@ -30,7 +30,8 @@ fi
 # updating angular env with staging project
 cat > /home/app/source/angular-editor/dist/editor/assets/environment.json <<EOF
     {
-      "NARRA_API_HOSTNAME": "$NARRA_API_HOSTNAME"
+      "NARRA_API_HOSTNAME": "$NARRA_API_HOSTNAME",
+      "NARRA_API_PROTOCOL": "$NARRA_API_PROTOCOL"
     }
 EOF
 
